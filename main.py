@@ -45,7 +45,7 @@ class Player(pygame.sprite.Sprite):
         super().__init__()
 
         # Create the image of the block
-        self.image = pygame.Surface((50, 50))
+        self.image = pygame.Surface((35, 35))
         self.image.fill(color)
 
         # Based on the image, create a Rect for the block
@@ -57,42 +57,37 @@ class Player(pygame.sprite.Sprite):
         self.lives = 3
 
         # Velocity
+        self.x_vel = 0
+        self.y_vel = 0
+
+    def update(self):
+        """ Update the player location"""
+        # Move along the x axis
+        self.rect.x += self.x_vel
+
+        # Move along the y axis
+        self.rect.y += self.y_vel
+
+    def go_left(self):
+        """ Called when the user holds the key to move left"""
+        self.x_vel = -3
+
+    def go_right(self):
+        """  Called when the user holds the key to move right"""
         self.x_vel = 3
+
+    def go_up(self):
+        """  Called when the user holds the key to move up"""
+        self.y_vel = -3
+
+    def go_down(self):
+        """  Called when the user holds the key to move down"""
         self.y_vel = 3
 
-    # Movement controlled by the player
-
-    def move(self):
-
-
-# class Wall(pygame.sprite.Sprite):
-#     """Wall
-#
-#     Attributes:
-#         image: visual representation
-#         rect: mathematical representation
-#     """
-#
-#     def __init__(self, width: int, height: int, coords: tuple) -> None:
-#         """
-#         Arguments:
-#             width: width of the wall
-#             height: height of the wall
-#             coords: tuple of (x,y) to represent location
-#         """
-#
-#         # Call the superclass constructor
-#         super().__init__()
-#
-#         self.image = pygame.Surface((width, height))
-#         self.image.fill(RED)  # TODO: choose a colour you like
-#
-#         # Based on the image, create a Rect for the block
-#         self.rect = self.image.get_rect()
-#
-#         # Set the top left of the wall to be at coords
-#         self.rect.topleft = coords
-
+    def stop(self):
+        """Stop the player"""
+        self.x_vel = 0
+        self.y_vel = 0
 
 def main() -> None:
     """Driver of the Python script"""
@@ -115,7 +110,9 @@ def main() -> None:
     wall_sprites = pygame.sprite.Group()
 
     player_one = Player((0, 0), RED)
+    player_two = Player((950, 0), BLUE)
     all_sprites.add(player_one)
+    all_sprites.add(player_two)
 
     # ----------- MAIN LOOP
     while not done:
@@ -124,7 +121,45 @@ def main() -> None:
             if event.type == pygame.QUIT:
                 done = True
 
+            # Keys to move player one
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_a:
+                    player_one.go_left()
+                if event.key == pygame.K_d:
+                    player_one.go_right()
+                if event.key == pygame.K_w:
+                    player_one.go_up()
+                if event.key == pygame.K_s:
+                    player_one.go_down()
+
+            # Keys to move player two
+                if event.key == pygame.K_LEFT:
+                    player_two.go_left()
+                if event.key == pygame.K_RIGHT:
+                    player_two.go_right()
+                if event.key == pygame.K_UP:
+                    player_two.go_up()
+                if event.key == pygame.K_DOWN:
+                    player_two.go_down()
+
+            if event.type == pygame.KEYUP:
+                # Stops player one when the user lifts up any keys in [W,A,S,D]
+                if event.key in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]:
+                    if player_one.x_vel != 0:
+                        player_one.stop()
+                    elif player_one.y_vel != 0:
+                        player_one.stop()
+
+                # Stops player two when the user lifts up any arrow keys
+                elif event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]:
+                    if player_two.x_vel != 0:
+                        player_two.stop()
+                    elif player_two.y_vel != 0:
+                        player_two.stop()
+
         # ----------- CHANGE ENVIRONMENT
+
+        all_sprites.update()
 
         # ----------- DRAW THE ENVIRONMENT
         screen.fill(BGCOLOUR)  # fill with bgcolor
