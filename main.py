@@ -89,6 +89,34 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0
 
+class Wall(pygame.sprite.Sprite):
+    """Wall
+
+    Attributes:
+        image: visual representation
+        rect: mathematical representation
+    """
+
+    def __init__(self, width: int, height: int, coords: tuple) -> None:
+        """
+        Arguments:
+            width: width of the wall
+            height: height of the wall
+            coords: tuple of (x,y) to represent location
+        """
+
+        # Call the superclass constructor
+        super().__init__()
+
+        self.image = pygame.Surface((width, height))
+        self.image.fill(GREEN)  # TODO: choose a colour you like
+
+        # Based on the image, create a Rect for the block
+        self.rect = self.image.get_rect()
+
+        # Set the top left of the wall to be at coords
+        self.rect.topleft = coords
+
 def main() -> None:
     """Driver of the Python script"""
     # Create the screen
@@ -103,16 +131,37 @@ def main() -> None:
     time_start = time.time()
     time_introduction = 7
     time_invincible = 3
+    wall_attributes = [
+        [40, 354, (0, 0)],
+        [40, 354, (0, 414)],
+        [40, 354, (984, 0)],
+        [40, 354, (984, 414)],
+        [1024, 40, (0, 0)],
+        [1024, 40, (0, 728)],
+        [40, 350, (90, 90)],
+        [200, 40, (90, 90)],
+        [40, 350, (180, 180)],
+        [400, 40, (100, 580)],
+    ]
 
     # Create a group of sprites to hold Sprites
     all_sprites = pygame.sprite.Group()
     player_sprites = pygame.sprite.Group()
     wall_sprites = pygame.sprite.Group()
 
-    player_one = Player((0, 0), RED)
-    player_two = Player((950, 0), BLUE)
+
+    for attribute in wall_attributes:
+        wall = Wall(*attribute)
+
+        wall_sprites.add(wall)
+        all_sprites.add(wall)
+
+    player_one = Player((40, 40), RED)
+    player_two = Player((948, 690), BLUE)
     all_sprites.add(player_one)
     all_sprites.add(player_two)
+    player_sprites.add(player_one)
+    player_sprites.add(player_two)
 
     # ----------- MAIN LOOP
     while not done:
@@ -160,6 +209,25 @@ def main() -> None:
         # ----------- CHANGE ENVIRONMENT
 
         all_sprites.update()
+
+        # See if we hit anything
+        for player in player_sprites:
+            block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
+            for block in block_hit_list:
+                # If the player is moving right,
+                # Set their right side to the left side of the block hit
+                if player.x_vel > 0:
+                    player.rect.right = block.rect.left
+                elif player.x_vel < 0:
+                    # If the player is moving left, do the opposite
+                    player.rect.left = block.rect.right
+                elif player.y_vel > 0:
+                    # If the player is moving down,
+                    # Set their bottom side to the top of the block hit
+                    player.rect.bottom = block.rect.top
+                elif player.y_vel < 0:
+                    # If the player is moving up, do the opposite
+                    player.rect.top = block.rect.bottom
 
         # ----------- DRAW THE ENVIRONMENT
         screen.fill(BGCOLOUR)  # fill with bgcolor
