@@ -142,8 +142,7 @@ def main() -> None:
         [200, 40, (90, 90)],
         [40, 350, (180, 180)],
         [400, 40, (100, 580)],
-        [500, 80, (400, 90)],
-
+        [500, 40, (400, 110)]
     ]
 
     # Create a group of sprites to hold Sprites
@@ -217,8 +216,8 @@ def main() -> None:
             for opponent in opponent_hit_list:
                 if opponent != player:
                     time_hit = time.time()
-                        opponent.lives -= 1
-                        print(opponent)
+                    opponent.lives -= 1
+                    print(opponent)
             block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
             for block in block_hit_list:
                 # If the player is moving right,
