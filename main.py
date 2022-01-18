@@ -142,13 +142,14 @@ def main() -> None:
         [200, 40, (90, 90)],
         [40, 350, (180, 180)],
         [400, 40, (100, 580)],
+        [500, 80, (400, 90)],
+
     ]
 
     # Create a group of sprites to hold Sprites
     all_sprites = pygame.sprite.Group()
     player_sprites = pygame.sprite.Group()
     wall_sprites = pygame.sprite.Group()
-
 
     for attribute in wall_attributes:
         wall = Wall(*attribute)
@@ -184,11 +185,11 @@ def main() -> None:
             # Keys to move player two
                 if event.key == pygame.K_LEFT:
                     player_two.go_left()
-                if event.key == pygame.K_RIGHT:
+                elif event.key == pygame.K_RIGHT:
                     player_two.go_right()
-                if event.key == pygame.K_UP:
+                elif event.key == pygame.K_UP:
                     player_two.go_up()
-                if event.key == pygame.K_DOWN:
+                elif event.key == pygame.K_DOWN:
                     player_two.go_down()
 
             if event.type == pygame.KEYUP:
@@ -212,21 +213,31 @@ def main() -> None:
 
         # See if we hit anything
         for player in player_sprites:
+            opponent_hit_list = pygame.sprite.spritecollide(player, player_sprites, False)
+            for opponent in opponent_hit_list:
+                if opponent != player:
+                    time_hit = time.time()
+                        opponent.lives -= 1
+                        print(opponent)
             block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
             for block in block_hit_list:
                 # If the player is moving right,
                 # Set their right side to the left side of the block hit
-                if player.x_vel > 0:
+                if player.x_vel > 0 and block.rect.left <= player.rect.right < block.rect.right:
+                    player.stop()
                     player.rect.right = block.rect.left
-                elif player.x_vel < 0:
+                elif player.x_vel < 0 and block.rect.right >= player.rect.left > block.rect.left:
                     # If the player is moving left, do the opposite
+                    player.stop()
                     player.rect.left = block.rect.right
-                elif player.y_vel > 0:
+
+                elif player.y_vel > 0 and block.rect.top <= player.rect.bottom < block.rect.bottom:
                     # If the player is moving down,
                     # Set their bottom side to the top of the block hit
+                    player.stop()
                     player.rect.bottom = block.rect.top
-                elif player.y_vel < 0:
-                    # If the player is moving up, do the opposite
+                elif player.y_vel < 0 and block.rect.bottom >= player.rect.top > block.rect.top:
+                    player.stop()
                     player.rect.top = block.rect.bottom
 
         # ----------- DRAW THE ENVIRONMENT
