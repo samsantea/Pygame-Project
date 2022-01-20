@@ -60,6 +60,8 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0
 
+        self.planter = False
+
     def update(self):
         """ Update the player location"""
         # Move along the x axis
@@ -117,6 +119,40 @@ class Wall(pygame.sprite.Sprite):
         # Set the top left of the wall to be at coords
         self.rect.topleft = coords
 
+class Bomb(pygame.sprite.Sprite):
+    """Bomb
+
+    Attributes:
+    image: visual representation
+    rect: mathematical representation
+    planting_time: how much time is left from beginning to plant until the bomb is set
+    plant_speed
+    """
+    def __init__(self, coords: tuple) -> None:
+        """
+        Arguments:
+            coords: tuple of (x,y) to represent location
+        """
+
+        super().__init__()
+
+        self.image = pygame.Surface((20, 20))
+        self.image.fill(BLACK)
+
+        self.rect = self.image.get_rect()
+
+        self.planting_time = 15.0
+        self.plant_speed = 0.0
+
+    def update(self):
+        self.planting_time += self.plant_speed
+
+    def plant(self):
+        self.plant_speed = -0.1
+
+    def stop_plant(self):
+        self.plant_speed = 0.0
+
 def main() -> None:
     """Driver of the Python script"""
     # Create the screen
@@ -131,10 +167,12 @@ def main() -> None:
     time_start = time.time()
     time_introduction = 7
     time_invincible = 3
+    time_start_plant = 0.0
+    round = 1
     player_one_click = False # Prevents player one from holding down more than one key
     player_two_click = False # Prevents player one from holding down more than one key
-    player_one_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]
-    player_two_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]
+    player_one_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
+    player_two_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
 
     wall_attributes = [
         [40, 354, (0, 0)],
@@ -162,11 +200,19 @@ def main() -> None:
         all_sprites.add(wall)
 
     player_one = Player((40, 40), RED)
+    player_one.planter = True
     player_two = Player((948, 690), BLUE)
     all_sprites.add(player_one)
     all_sprites.add(player_two)
     player_sprites.add(player_one)
     player_sprites.add(player_two)
+    time_hit = 0.0
+
+    bomb = Bomb((0, 0))
+    all_sprites.add(bomb)
+
+    new_bomb_coords = (-1, -1)
+    time_ticking = 0
 
     # ----------- MAIN LOOP
     while not done:
@@ -188,6 +234,9 @@ def main() -> None:
                         player_one.go_up()
                     elif event.key == pygame.K_s:
                         player_one.go_down()
+                    elif event.key == pygame.K_4 and player_one.planter == True:
+                        bomb.plant()
+                        print("planting")
 
             # Keys to move player two
                 elif event.key in player_two_keys and player_two_click == False:
@@ -201,8 +250,15 @@ def main() -> None:
                         player_two.go_up()
                     elif event.key == pygame.K_DOWN:
                         player_two.go_down()
+                    elif event.key == pygame.K_KP4 and player_two.planter == True:
+                        bomb.plant()
+                        print("planting")
 
             elif event.type == pygame.KEYUP:
+                if event.key == pygame.K_4:
+                    bomb.stop_plant()
+                    print("stopped plant")
+
                 if event.key in player_one_keys:
                     player_one_click = False
                     if player_one.x_vel != 0 or player_one.y_vel != 0:
@@ -216,14 +272,18 @@ def main() -> None:
 
         all_sprites.update()
 
+        # bomb.rect.center = player_one.rect.center
+
         # See if we hit anything
         for player in player_sprites:
             opponent_hit_list = pygame.sprite.spritecollide(player, player_sprites, False)
             for opponent in opponent_hit_list:
                 if opponent != player:
-                    time_hit = time.time()
-                    opponent.lives -= 1
-                    print(opponent)
+                    if (time.time() - time_hit) >= 5.0:
+                        time_hit = time.time()
+
+                        opponent.lives -= 1
+                        print(opponent)
             block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
             for block in block_hit_list:
                 # If the player is moving right,
@@ -244,6 +304,22 @@ def main() -> None:
                 elif player.y_vel < 0 and block.rect.bottom >= player.rect.top > block.rect.top:
                     player.stop()
                     player.rect.top = block.rect.bottom
+
+            if player.planter == True and bomb.planting_time > 0:
+                bomb.rect.center = player.rect.center
+
+            elif -0.1 <= bomb.planting_time <= 0.0:
+                print("planted")
+                time_ticking = time.time()
+                if new_bomb_coords == (-1, -1):
+                    new_bomb_coords = player.rect.center
+                    bomb.rect.center = new_bomb_coords
+
+            if player.lives <= 0:
+                done = True
+
+
+
 
         # ----------- DRAW THE ENVIRONMENT
         screen.fill(BGCOLOUR)  # fill with bgcolor
