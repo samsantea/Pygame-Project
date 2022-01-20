@@ -131,6 +131,11 @@ def main() -> None:
     time_start = time.time()
     time_introduction = 7
     time_invincible = 3
+    player_one_click = False # Prevents player one from holding down more than one key
+    player_two_click = False # Prevents player one from holding down more than one key
+    player_one_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]
+    player_two_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]
+
     wall_attributes = [
         [40, 354, (0, 0)],
         [40, 354, (0, 414)],
@@ -172,38 +177,39 @@ def main() -> None:
 
             # Keys to move player one
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_a:
-                    player_one.go_left()
-                if event.key == pygame.K_d:
-                    player_one.go_right()
-                if event.key == pygame.K_w:
-                    player_one.go_up()
-                if event.key == pygame.K_s:
-                    player_one.go_down()
+                if event.key in player_one_keys and player_one_click == False:
+                    player.stop()
+                    player_one_click = True
+                    if event.key == pygame.K_a:
+                        player_one.go_left()
+                    elif event.key == pygame.K_d:
+                        player_one.go_right()
+                    elif event.key == pygame.K_w:
+                        player_one.go_up()
+                    elif event.key == pygame.K_s:
+                        player_one.go_down()
 
             # Keys to move player two
-                if event.key == pygame.K_LEFT:
-                    player_two.go_left()
-                elif event.key == pygame.K_RIGHT:
-                    player_two.go_right()
-                elif event.key == pygame.K_UP:
-                    player_two.go_up()
-                elif event.key == pygame.K_DOWN:
-                    player_two.go_down()
+                elif event.key in player_two_keys and player_two_click == False:
+                    player.stop()
+                    player_one_click = True
+                    if event.key == pygame.K_LEFT:
+                        player_two.go_left()
+                    elif event.key == pygame.K_RIGHT:
+                        player_two.go_right()
+                    elif event.key == pygame.K_UP:
+                        player_two.go_up()
+                    elif event.key == pygame.K_DOWN:
+                        player_two.go_down()
 
-            if event.type == pygame.KEYUP:
-                # Stops player one when the user lifts up any keys in [W,A,S,D]
-                if event.key in [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s]:
-                    if player_one.x_vel != 0:
+            elif event.type == pygame.KEYUP:
+                if event.key in player_one_keys:
+                    player_one_click = False
+                    if player_one.x_vel != 0 or player_one.y_vel != 0:
                         player_one.stop()
-                    elif player_one.y_vel != 0:
-                        player_one.stop()
-
-                # Stops player two when the user lifts up any arrow keys
-                elif event.key in [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN]:
-                    if player_two.x_vel != 0:
-                        player_two.stop()
-                    elif player_two.y_vel != 0:
+                elif event.key in player_two_keys:
+                    player_two_click = False
+                    if player_two.x_vel != 0 or player_two.y_vel != 0:
                         player_two.stop()
 
         # ----------- CHANGE ENVIRONMENT
