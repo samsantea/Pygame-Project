@@ -168,7 +168,9 @@ def main() -> None:
     time_introduction = 7
     time_invincible = 3
     time_start_plant = 0.0
+    respawn_location = (40, 40)
     round = 1
+    allow_defuse = False
     player_one_click = False # Prevents player one from holding down more than one key
     player_two_click = False # Prevents player one from holding down more than one key
     player_one_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
@@ -199,7 +201,7 @@ def main() -> None:
         wall_sprites.add(wall)
         all_sprites.add(wall)
 
-    player_one = Player((40, 40), RED)
+    player_one = Player(respawn_location, RED)
     player_one.planter = True
     player_two = Player((948, 690), BLUE)
     all_sprites.add(player_one)
@@ -213,6 +215,7 @@ def main() -> None:
 
     new_bomb_coords = (-1, -1)
     time_ticking = 0
+    time_defuse = 0
 
     # ----------- MAIN LOOP
     while not done:
@@ -222,6 +225,8 @@ def main() -> None:
                 done = True
 
             # Keys to move player one
+
+            # TODO: optimize code with for loop (if possible)
             if event.type == pygame.KEYDOWN:
                 if event.key in player_one_keys and player_one_click == False:
                     player.stop()
@@ -234,9 +239,12 @@ def main() -> None:
                         player_one.go_up()
                     elif event.key == pygame.K_s:
                         player_one.go_down()
-                    elif event.key == pygame.K_4 and player_one.planter == True:
-                        bomb.plant()
-                        print("planting")
+                    elif event.key == pygame.K_4:
+                        if player_one.planter == True:
+                            bomb.plant()
+                            print("planting")
+                        elif allow_defuse == True:
+                            time_defuse = time.time()
 
             # Keys to move player two
                 elif event.key in player_two_keys and player_two_click == False:
@@ -250,23 +258,35 @@ def main() -> None:
                         player_two.go_up()
                     elif event.key == pygame.K_DOWN:
                         player_two.go_down()
-                    elif event.key == pygame.K_KP4 and player_two.planter == True:
-                        bomb.plant()
-                        print("planting")
+                    elif event.key == pygame.K_KP4:
+                        if player_two.planter == True:
+                            bomb.plant()
+                            print("planting")
+                        elif allow_defuse == True:
+                            time_defuse = time.time()
+                            print("defusing")
+
 
             elif event.type == pygame.KEYUP:
-                if event.key == pygame.K_4:
-                    bomb.stop_plant()
-                    print("stopped plant")
-
                 if event.key in player_one_keys:
                     player_one_click = False
                     if player_one.x_vel != 0 or player_one.y_vel != 0:
                         player_one.stop()
+
+                    if event.key == pygame.K_4:
+                        bomb.stop_plant()
+                        time_defuse = 0
+                        print("stopped")
+
                 elif event.key in player_two_keys:
                     player_two_click = False
                     if player_two.x_vel != 0 or player_two.y_vel != 0:
                         player_two.stop()
+
+                    if event.key == pygame.K_KP4:
+                        bomb.stop_plant()
+                        time_defuse = 0
+                        print("stopped")
 
         # ----------- CHANGE ENVIRONMENT
 
@@ -281,8 +301,8 @@ def main() -> None:
                 if opponent != player:
                     if (time.time() - time_hit) >= 5.0:
                         time_hit = time.time()
-
                         opponent.lives -= 1
+                        opponent.rect.toplefts = respawn_location
                         print(opponent)
             block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
             for block in block_hit_list:
@@ -315,11 +335,15 @@ def main() -> None:
                     new_bomb_coords = player.rect.center
                     bomb.rect.center = new_bomb_coords
 
+            elif player.planter == False and bomb.planting_time < 1:
+                if pygame.sprite.collide_rect(player, bomb):
+                    allow_defuse = True
+            if time_defuse > 0:
+                if time.time() - time_defuse > 10:
+                    done = True # TODO: add an endgame message instead of closing game
+
             if player.lives <= 0:
-                done = True
-
-
-
+                done = True # TODO: add an endgame message instead of closing game
 
         # ----------- DRAW THE ENVIRONMENT
         screen.fill(BGCOLOUR)  # fill with bgcolor
