@@ -32,6 +32,7 @@ class Player(pygame.sprite.Sprite):
         lives: describe how many lives player one has
         x_vel: x velocity
         y_vel: y velocity
+        wins: how many rounds the player has won
     """
 
     def __init__(self, coords: tuple, color) -> None:
@@ -61,6 +62,8 @@ class Player(pygame.sprite.Sprite):
         self.y_vel = 0
 
         self.planter = False
+
+        wins = 0
 
     def update(self):
         """ Update the player location"""
@@ -162,19 +165,18 @@ def main() -> None:
     # Create some local variables that describe the environment
     done = False
     clock = pygame.time.Clock()
-    player_one_wins = 0
-    player_two_wins = 0
+    planter_wins = 0
+    defender_wins = 0
     time_start = time.time()
     time_introduction = 7
     time_invincible = 3
     time_start_plant = 0.0
-    respawn_location = (40, 40)
     round = 1
-    allow_defuse = False
-    player_one_click = False # Prevents player one from holding down more than one key
-    player_two_click = False # Prevents player one from holding down more than one key
-    player_one_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
-    player_two_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
+    game_state = "introduction"
+    planter_click = False # Prevents player one from holding down more than one key
+    defender_click = False # Prevents player one from holding down more than one key
+    planter_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
+    defender_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
 
     wall_attributes = [
         [40, 354, (0, 0)],
@@ -187,8 +189,12 @@ def main() -> None:
         [200, 40, (90, 90)],
         [40, 350, (180, 180)],
         [400, 40, (100, 580)],
-        [500, 40, (400, 110)]
+        [500, 40, (400, 110)],
+        [40, 300, (650, 200)],
+        [250, 40, (650, 500)],
+        [40, 160, (860, 380)]
     ]
+
 
     # Create a group of sprites to hold Sprites
     all_sprites = pygame.sprite.Group()
@@ -201,21 +207,22 @@ def main() -> None:
         wall_sprites.add(wall)
         all_sprites.add(wall)
 
-    player_one = Player(respawn_location, RED)
-    player_one.planter = True
-    player_two = Player((948, 690), BLUE)
-    all_sprites.add(player_one)
-    all_sprites.add(player_two)
-    player_sprites.add(player_one)
-    player_sprites.add(player_two)
+    planter = Player((40, 40), RED)
+    planter.planter = True
+    defender = Player((948, 690), BLUE)
+    all_sprites.add(planter)
+    all_sprites.add(defender)
+    player_sprites.add(planter)
+    player_sprites.add(defender)
     time_hit = 0.0
+    time_end_round = 0.0
+    time_start = 0
 
-    bomb = Bomb((0, 0))
+    bomb = Bomb(planter.rect.center)
     all_sprites.add(bomb)
 
     new_bomb_coords = (-1, -1)
-    time_ticking = 0
-    time_defuse = 0
+    time_ticking = 0.0
 
     # ----------- MAIN LOOP
     while not done:
@@ -225,125 +232,116 @@ def main() -> None:
                 done = True
 
             # Keys to move player one
-
-            # TODO: optimize code with for loop (if possible)
-            if event.type == pygame.KEYDOWN:
-                if event.key in player_one_keys and player_one_click == False:
-                    player.stop()
-                    player_one_click = True
-                    if event.key == pygame.K_a:
-                        player_one.go_left()
-                    elif event.key == pygame.K_d:
-                        player_one.go_right()
-                    elif event.key == pygame.K_w:
-                        player_one.go_up()
-                    elif event.key == pygame.K_s:
-                        player_one.go_down()
-                    elif event.key == pygame.K_4:
-                        if player_one.planter == True:
+            if game_state == "running":
+                if event.type == pygame.KEYDOWN:
+                    if event.key in planter_keys and planter_click == False:
+                        planter.stop()
+                        planter_click = True
+                        if event.key == pygame.K_a:
+                            planter.go_left()
+                        elif event.key == pygame.K_d:
+                            planter.go_right()
+                        elif event.key == pygame.K_w:
+                            planter.go_up()
+                        elif event.key == pygame.K_s:
+                            planter.go_down()
+                        elif event.key == pygame.K_4 and planter.planter == True:
                             bomb.plant()
                             print("planting")
-                        elif allow_defuse == True:
-                            time_defuse = time.time()
 
-            # Keys to move player two
-                elif event.key in player_two_keys and player_two_click == False:
-                    player.stop()
-                    player_one_click = True
-                    if event.key == pygame.K_LEFT:
-                        player_two.go_left()
-                    elif event.key == pygame.K_RIGHT:
-                        player_two.go_right()
-                    elif event.key == pygame.K_UP:
-                        player_two.go_up()
-                    elif event.key == pygame.K_DOWN:
-                        player_two.go_down()
-                    elif event.key == pygame.K_KP4:
-                        if player_two.planter == True:
+                # Keys to move player two
+                    elif event.key in defender_keys and defender_click == False:
+                        defender.stop()
+                        defender_click = True
+                        if event.key == pygame.K_LEFT:
+                            defender.go_left()
+                        elif event.key == pygame.K_RIGHT:
+                            defender.go_right()
+                        elif event.key == pygame.K_UP:
+                            defender.go_up()
+                        elif event.key == pygame.K_DOWN:
+                            defender.go_down()
+                        elif event.key == pygame.K_KP4 and defender.planter == True:
                             bomb.plant()
                             print("planting")
-                        elif allow_defuse == True:
-                            time_defuse = time.time()
-                            print("defusing")
 
-
-            elif event.type == pygame.KEYUP:
-                if event.key in player_one_keys:
-                    player_one_click = False
-                    if player_one.x_vel != 0 or player_one.y_vel != 0:
-                        player_one.stop()
-
+                elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_4:
                         bomb.stop_plant()
-                        time_defuse = 0
-                        print("stopped")
+                        print("stopped plant")
 
-                elif event.key in player_two_keys:
-                    player_two_click = False
-                    if player_two.x_vel != 0 or player_two.y_vel != 0:
-                        player_two.stop()
-
-                    if event.key == pygame.K_KP4:
-                        bomb.stop_plant()
-                        time_defuse = 0
-                        print("stopped")
+                    if event.key in planter_keys:
+                        planter_click = False
+                        if planter.x_vel != 0 or planter.y_vel != 0:
+                            planter.stop()
+                    elif event.key in defender_keys:
+                        defender_click = False
+                        if defender.x_vel != 0 or defender.y_vel != 0:
+                            defender.stop()
 
         # ----------- CHANGE ENVIRONMENT
 
         all_sprites.update()
 
-        # bomb.rect.center = player_one.rect.center
+        if game_state == "running":
+            # See if we hit anything
+            for player in player_sprites:
+                opponent_hit = pygame.sprite.spritecollide(player, player_sprites, False)
+                for opponent in opponent_hit:
+                    if opponent != player:
+                        if (time.time() - time_hit) >= 5.0:
+                            time_hit = time.time()
 
-        # See if we hit anything
-        for player in player_sprites:
-            opponent_hit_list = pygame.sprite.spritecollide(player, player_sprites, False)
-            for opponent in opponent_hit_list:
-                if opponent != player:
-                    if (time.time() - time_hit) >= 5.0:
-                        time_hit = time.time()
-                        opponent.lives -= 1
-                        opponent.rect.toplefts = respawn_location
-                        print(opponent)
-            block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False) # TODO: fix teleportation bug
-            for block in block_hit_list:
-                # If the player is moving right,
-                # Set their right side to the left side of the block hit
-                if player.x_vel > 0 and block.rect.left <= player.rect.right < block.rect.right:
-                    player.stop()
-                    player.rect.right = block.rect.left
-                elif player.x_vel < 0 and block.rect.right >= player.rect.left > block.rect.left:
-                    # If the player is moving left, do the opposite
-                    player.stop()
-                    player.rect.left = block.rect.right
+                            opponent.lives -= 1
+                            print(opponent)
+                    if opponent.lives == 0:
+                        round += 1
+                        game_state == "round end"
+                        player.wins += 1
+                block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False)
+                for block in block_hit_list:
+                    # If the player is moving right,
+                    # Set their right side to the left side of the block hit
+                    if player.x_vel > 0 and block.rect.left <= player.rect.right < block.rect.right:
+                        player.stop()
+                        player.rect.right = block.rect.left
+                    elif player.x_vel < 0 and block.rect.right >= player.rect.left > block.rect.left:
+                        # If the player is moving left, do the opposite
+                        player.stop()
+                        player.rect.left = block.rect.right
 
-                elif player.y_vel > 0 and block.rect.top <= player.rect.bottom < block.rect.bottom:
-                    # If the player is moving down,
-                    # Set their bottom side to the top of the block hit
-                    player.stop()
-                    player.rect.bottom = block.rect.top
-                elif player.y_vel < 0 and block.rect.bottom >= player.rect.top > block.rect.top:
-                    player.stop()
-                    player.rect.top = block.rect.bottom
+                    elif player.y_vel > 0 and block.rect.top <= player.rect.bottom < block.rect.bottom:
+                        # If the player is moving down,
+                        # Set their bottom side to the top of the block hit
+                        player.stop()
+                        player.rect.bottom = block.rect.top
+                    elif player.y_vel < 0 and block.rect.bottom >= player.rect.top > block.rect.top:
+                        player.stop()
+                        player.rect.top = block.rect.bottom
 
-            if player.planter == True and bomb.planting_time > 0:
-                bomb.rect.center = player.rect.center
+                if player.planter == True and bomb.planting_time > 0:
+                    bomb.rect.center = player.rect.center
 
-            elif -0.1 <= bomb.planting_time <= 0.0:
-                print("planted")
-                time_ticking = time.time()
-                if new_bomb_coords == (-1, -1):
-                    new_bomb_coords = player.rect.center
-                    bomb.rect.center = new_bomb_coords
+                elif -0.1 <= bomb.planting_time <= 0.0:
+                    print("planted")
+                    time_ticking = time.time()
+                    if new_bomb_coords == (-1, -1):
+                        new_bomb_coords = player.rect.center
+                        bomb.rect.center = new_bomb_coords
 
-            elif player.planter == False and bomb.planting_time < 1:
-                if pygame.sprite.collide_rect(player, bomb):
-                    allow_defuse = True
-            if time_defuse > 0:
-                if time.time() - time_defuse > 10:
-                    done = True # TODO: add an endgame message instead of closing game
+        if game_state == "round end":
+            if time_round_end == 0:
+                time_round_end = time.time()
 
-            if player.lives <= 0:
-                done = True # TODO: add an endgame message instead of closing game
+            elif (time.time() - time_round_end) >= 5:
+                game_state = "running"
+
+        elif game_state == "introduction":
+            if time_start == 0:
+                time_start = time.time()
+
+            if (time.time() - time_start) >= 10:
+                game_state = "running"
 
         # ----------- DRAW THE ENVIRONMENT
         screen.fill(BGCOLOUR)  # fill with bgcolor
@@ -360,3 +358,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
