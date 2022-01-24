@@ -33,6 +33,7 @@ class Player(pygame.sprite.Sprite):
         x_vel: x velocity
         y_vel: y velocity
         wins: how many rounds the player has won
+        planter: determines whether the player is the bomb planter
     """
 
     def __init__(self, coords: tuple, color) -> None:
@@ -61,9 +62,9 @@ class Player(pygame.sprite.Sprite):
         self.x_vel = 0
         self.y_vel = 0
 
-        self.planter = False
+        self.is_planter = False
 
-        wins = 0
+        self.wins = 0
 
     def update(self):
         """ Update the player location"""
@@ -131,6 +132,7 @@ class Bomb(pygame.sprite.Sprite):
     planting_time: how much time is left from beginning to plant until the bomb is set
     plant_speed
     """
+
     def __init__(self, coords: tuple) -> None:
         """
         Arguments:
@@ -139,6 +141,9 @@ class Bomb(pygame.sprite.Sprite):
 
         super().__init__()
 
+        self.reset()
+
+    def reset(self):
         self.image = pygame.Surface((20, 20))
         self.image.fill(BLACK)
 
@@ -171,12 +176,13 @@ def main() -> None:
     time_introduction = 7
     time_invincible = 3
     time_start_plant = 0.0
-    round = 1
-    game_state = "introduction"
+    game_state = "running"
     planter_click = False # Prevents player one from holding down more than one key
     defender_click = False # Prevents player one from holding down more than one key
     planter_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
     defender_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
+    planter_spawn = (40, 40)
+    defender_spawn = (948, 690)
 
     wall_attributes = [
         [40, 354, (0, 0)],
@@ -207,15 +213,15 @@ def main() -> None:
         wall_sprites.add(wall)
         all_sprites.add(wall)
 
-    planter = Player((40, 40), RED)
-    planter.planter = True
-    defender = Player((948, 690), BLUE)
+    planter = Player(planter_spawn, RED)
+    planter.is_planter = True
+    defender = Player(defender_spawn, BLUE)
     all_sprites.add(planter)
     all_sprites.add(defender)
     player_sprites.add(planter)
     player_sprites.add(defender)
     time_hit = 0.0
-    time_end_round = 0.0
+    time_round_end = 0.0
     time_start = 0
 
     bomb = Bomb(planter.rect.center)
@@ -223,6 +229,10 @@ def main() -> None:
 
     new_bomb_coords = (-1, -1)
     time_ticking = 0.0
+    time_defuse = 0
+
+    font = pygame.font.SysFont("Arial", 25)
+    big_font = pygame.font.SysFont("Arial", 40)
 
     # ----------- MAIN LOOP
     while not done:
@@ -245,7 +255,7 @@ def main() -> None:
                             planter.go_up()
                         elif event.key == pygame.K_s:
                             planter.go_down()
-                        elif event.key == pygame.K_4 and planter.planter == True:
+                        elif event.key == pygame.K_4 and planter.is_planter == True:
                             bomb.plant()
                             print("planting")
 
@@ -261,9 +271,10 @@ def main() -> None:
                             defender.go_up()
                         elif event.key == pygame.K_DOWN:
                             defender.go_down()
-                        elif event.key == pygame.K_KP4 and defender.planter == True:
-                            bomb.plant()
-                            print("planting")
+                        elif event.key == pygame.K_KP4 and allow_defuse == True:
+                            time_defuse = time.time()
+                            print("defusing")
+
 
                 elif event.type == pygame.KEYUP:
                     if event.key == pygame.K_4:
@@ -279,6 +290,10 @@ def main() -> None:
                         if defender.x_vel != 0 or defender.y_vel != 0:
                             defender.stop()
 
+                        if event.key == pygame.K_KP4:
+                            time_defuse = 0
+                            print("stopped")
+
         # ----------- CHANGE ENVIRONMENT
 
         all_sprites.update()
@@ -286,6 +301,12 @@ def main() -> None:
         if game_state == "running":
             # See if we hit anything
             for player in player_sprites:
+                if 354 < player.rect.y <= player.rect.y <= 414:
+                    if player.rect.right <= 0:
+                        player.rect.left = SCREEN_WIDTH
+                    elif player.rect.left >= SCREEN_WIDTH:
+                        player.rect.right = 0
+
                 opponent_hit = pygame.sprite.spritecollide(player, player_sprites, False)
                 for opponent in opponent_hit:
                     if opponent != player:
@@ -294,10 +315,11 @@ def main() -> None:
 
                             opponent.lives -= 1
                             print(opponent)
-                    if opponent.lives == 0:
-                        round += 1
-                        game_state == "round end"
-                        player.wins += 1
+                        if opponent.lives == 0:
+                            round += 1
+                            print("round end")
+                            game_state = "round end"
+                            player.wins += 1
                 block_hit_list = pygame.sprite.spritecollide(player, wall_sprites, False)
                 for block in block_hit_list:
                     # If the player is moving right,
@@ -319,22 +341,43 @@ def main() -> None:
                         player.stop()
                         player.rect.top = block.rect.bottom
 
-                if player.planter == True and bomb.planting_time > 0:
+                if player.is_planter == True and bomb.planting_time > 0:
                     bomb.rect.center = player.rect.center
 
                 elif -0.1 <= bomb.planting_time <= 0.0:
-                    print("planted")
                     time_ticking = time.time()
                     if new_bomb_coords == (-1, -1):
                         new_bomb_coords = player.rect.center
                         bomb.rect.center = new_bomb_coords
 
+                if player.is_planter == False and bomb.planting_time < 1:
+                    if pygame.sprite.collide_rect(player, bomb):
+                        allow_defuse = True
+
+                if time_ticking != 0.0 and (time.time() - time_ticking) >= 60:
+                    player.wins += 1
+                    game_state = "round end"
+                    time_ticking = 0.0
+
+                if time_defuse > 0 and (time.time() - time_defuse) >= 10 and player.is_planter == False:
+                    player.wins += 1
+                    game_state = "round end"
+                    time_ticking = 0.0
+                    time_defuse = 0
+
         if game_state == "round end":
-            if time_round_end == 0:
+            if time_round_end == 0.0:
                 time_round_end = time.time()
+                for player in player_sprites:
+                    player.lives = 3
+                    player.x_vel = player.y_vel = 0
+                planter.rect.topleft = planter_spawn
+                defender.rect.topleft = defender_spawn
+                bomb.reset()
 
             elif (time.time() - time_round_end) >= 5:
                 game_state = "running"
+                time_round_end = 0.0
 
         elif game_state == "introduction":
             if time_start == 0:
@@ -348,6 +391,81 @@ def main() -> None:
 
         # Draw all sprites
         all_sprites.draw(screen)
+
+        if game_state == "introduction":
+            screen.blit(
+                font.render("Welcome to Bombfight!", True, BLACK),
+                (SCREEN_WIDTH / 3.5, SCREEN_HEIGHT / 3)
+            )
+            screen.blit(
+                font.render("Use WASD/Arrow keys to move.", True, BLACK),
+                (SCREEN_WIDTH / 3.5, SCREEN_HEIGHT / 2.5)
+            )
+            screen.blit(
+                font.render("PLANTER: Hold 4 to plant the bomb.", True, BLACK),
+                (SCREEN_WIDTH / 16, SCREEN_HEIGHT / 2)
+            )
+
+            screen.blit(
+                font.render("Hit the defender and", True, BLACK),
+                (SCREEN_WIDTH / 8, SCREEN_HEIGHT / 1.75)
+            )
+
+            screen.blit(
+                font.render("protect the bomb to win!", True, BLACK),
+                (SCREEN_WIDTH / 8, SCREEN_HEIGHT / 1.65)
+            )
+
+            screen.blit(
+                font.render("DEFENDER: Hold 4 to defuse the bomb!", True, BLACK),
+                (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+            )
+
+            screen.blit(
+                font.render("Attack the planter or!", True, BLACK),
+                (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 1.75)
+            )
+
+            screen.blit(
+                font.render("defuse to win!", True, BLACK),
+                (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 1.65)
+            )
+
+        else:
+            screen.blit(
+                font.render(f"LIVES: {planter.lives}", True, BLACK),
+                (SCREEN_WIDTH / 24, SCREEN_HEIGHT / 90)
+            )
+
+            screen.blit(font.render(f"LIVES: {planter.lives}", True, BLACK),
+                (SCREEN_WIDTH / 24, SCREEN_HEIGHT / 90)
+            )
+
+            screen.blit(font.render(f"LIVES: {defender.lives}", True, BLACK),
+                (SCREEN_WIDTH / 1.175, SCREEN_HEIGHT / 90)
+            )
+
+            screen.blit(font.render(f"LIVES: {defender.lives}", True, BLACK),
+                        (SCREEN_WIDTH / 1.175, SCREEN_HEIGHT / 90)
+                        )
+
+            screen.blit(font.render(f"{planter.wins} WINS", True, BLACK),
+                        (SCREEN_WIDTH / 3.25, SCREEN_HEIGHT / 90)
+                        )
+
+            screen.blit(font.render(f"{defender.wins} WINS", True, BLACK),
+                        (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 90)
+                        )
+
+            if time_ticking != 0.0:
+                screen.blit(big_font.render(f"{int(60 - (time.time() - time_ticking))}", True, BLACK),
+                    (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 90)
+                )
+
+            if game_state == "round end":
+                screen.blit(big_font.render(f"{int(5 - (time.time() - time_round_end))}", True, BLACK),
+                            (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2)
+                            )
 
         # Update the screen
         pygame.display.flip()
