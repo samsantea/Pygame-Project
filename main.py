@@ -251,6 +251,8 @@ def main() -> None:
     defender_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
     planter_spawn = (SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 19.2)
     defender_spawn = (SCREEN_WIDTH / 1.08, SCREEN_HEIGHT / 1.11)
+    planter_colour = CANDY_RED
+    defender_colour = CERULEAN
 
     # Create a group of sprites to hold Sprites
     all_sprites = pygame.sprite.Group()
@@ -371,7 +373,6 @@ def main() -> None:
 
         if game_state == "running":
             for player in player_sprites:
-
                 # If the player reaches either side of the tunnel on the map,
                 # teleport the player to the other side
                 if 354 < player.rect.y <= player.rect.y <= 414:
@@ -590,15 +591,7 @@ def main() -> None:
             )
 
         else:
-            # Else, show player lives and wins
-            screen.blit(
-                font.render(f"LIVES: {planter.lives}", True, CANDY_RED),
-                (SCREEN_WIDTH / 24, SCREEN_HEIGHT / 90)
-            )
-
-            screen.blit(font.render(f"LIVES: {defender.lives}", True, CERULEAN),
-                        (SCREEN_WIDTH / 1.175, SCREEN_HEIGHT / 90)
-                        )
+            # Else, show player wins
 
             screen.blit(font.render(f"{planter.wins} WINS", True, CANDY_RED),
                         (SCREEN_WIDTH / 3.25, SCREEN_HEIGHT / 90)
@@ -607,6 +600,22 @@ def main() -> None:
             screen.blit(font.render(f"{defender.wins} WINS", True, CERULEAN),
                         (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 90)
                         )
+
+            # Show player lives
+            for player in player_sprites:
+
+                # set the color and x coords of life display according to player role
+                if player.is_planter == True:
+                    life_colour = CANDY_RED
+                    lives_x_coords = [SCREEN_WIDTH / 20.48, SCREEN_WIDTH / 10.24, SCREEN_WIDTH / 6.83]
+
+                else:
+                    life_colour = CERULEAN
+                    lives_x_coords = [SCREEN_WIDTH / 1.20, SCREEN_WIDTH / 1.14, SCREEN_WIDTH / 1.08]
+
+                # for each player life, draw a rectangle with the proper coordinates
+                for i in range(player.lives):
+                    pygame.draw.rect(screen, life_colour, [lives_x_coords[i], 10, 20, 20])
 
             if time_ticking != 0.0:
                 # if the bomb has been planted, show the time left until the bomb explored
