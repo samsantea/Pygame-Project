@@ -529,11 +529,11 @@ def main() -> None:
             # Show introductory messages
             screen.blit(
                 big_font.render(f"Welcome to {WINDOW_TITLE}!", True, WHITE),
-                (SCREEN_WIDTH / 3.5, SCREEN_HEIGHT / 4)
+                (SCREEN_WIDTH / 4.5, SCREEN_HEIGHT / 4)
             )
             screen.blit(
                 big_font.render("Use WASD/Arrow keys to move.", True, WHITE),
-                (SCREEN_WIDTH / 4, SCREEN_HEIGHT / 3)
+                (SCREEN_WIDTH / 5, SCREEN_HEIGHT / 3)
             )
             screen.blit(
                 big_font.render("PLANTER", True, CANDY_RED),
