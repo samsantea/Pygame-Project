@@ -30,8 +30,11 @@ HIT_SOUND = pygame.mixer.Sound('./Music/ES_Impact Brick Hit 2 - SFX Producer.mp3
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 RED = (255, 0, 0)
+CANDY_RED = (219, 22, 47)
+CERULEAN = (6, 174, 213)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+PURPLE = (218, 182, 253)
 BGCOLOUR = (100, 100, 255)
 
 SCREEN_WIDTH = 1024
@@ -134,7 +137,7 @@ class Wall(pygame.sprite.Sprite):
         super().__init__()
 
         self.image = pygame.Surface((width, height))
-        self.image.fill(GREEN)  # TODO: choose a colour you like
+        self.image.fill(PURPLE)
 
         # Based on the image, create a Rect for the block
         self.rect = self.image.get_rect()
@@ -199,7 +202,7 @@ def main() -> None:
     done = False
     clock = pygame.time.Clock()
 
-    bg_image = pygame.image.load('./images/Vaporwave_background.jpg')
+    bg_image = pygame.image.load('./images/pixel_background_image.jpg')
 
     bg_image = pygame.transform.scale(bg_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
@@ -210,36 +213,44 @@ def main() -> None:
     time_introduction = 7
     time_invincible = 3
     time_start_plant = 0.0
-
-    new_bomb_coords = (-1, -1)
     time_ticking = 0.0
     time_defuse = 0
+    time_hit = 0.0
+    time_until_explosion = 60
+    time_round_end = 0.0
+    time_start = 0
+    time_between_rounds = 5
+    new_bomb_coords = (-1, -1)
+    round = 1
 
     game_state = "introduction"
+
+    # wall attributes: [width, height, (x, y)]
+    wall_attributes = [
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.17, (0, 0)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.17, (0, SCREEN_HEIGHT / 1.86)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.17, (SCREEN_WIDTH / 1.04, 0)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.17, (SCREEN_WIDTH / 1.04, SCREEN_HEIGHT / 1.86)],
+        [SCREEN_WIDTH, SCREEN_HEIGHT / 19.2, (0, 0)],
+        [SCREEN_WIDTH, SCREEN_HEIGHT / 19.2, (0, SCREEN_HEIGHT / 1.05)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.19, (SCREEN_WIDTH / 11.38, SCREEN_HEIGHT / 8.53)],
+        [SCREEN_WIDTH / 5.12, SCREEN_HEIGHT / 19.2, (SCREEN_WIDTH / 11.38, SCREEN_HEIGHT / 8.53)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.19, (SCREEN_WIDTH / 5.69, SCREEN_HEIGHT / 4.27)],
+        [SCREEN_WIDTH / 2.56, SCREEN_HEIGHT / 19.2, (SCREEN_WIDTH / 10.24, SCREEN_HEIGHT / 1.32)],
+        [SCREEN_WIDTH / 2.048, SCREEN_HEIGHT / 19.2, (SCREEN_WIDTH / 2.56, SCREEN_HEIGHT / 6.98)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 2.56, (SCREEN_WIDTH / 1.58, SCREEN_HEIGHT / 3.84)],
+        [SCREEN_WIDTH / 4.10, SCREEN_HEIGHT / 19.2, (SCREEN_WIDTH / 1.58, SCREEN_HEIGHT / 1.54)],
+        [SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 4.85, (SCREEN_WIDTH / 1.19, SCREEN_HEIGHT / 2.02)],
+        [40, 180, (400, 354)],
+        [40, 200, (525, 250)]
+    ]
 
     planter_click = False  # Prevents player one from holding down more than one key
     defender_click = False  # Prevents player one from holding down more than one key
     planter_keys = [pygame.K_a, pygame.K_d, pygame.K_w, pygame.K_s, pygame.K_4]
     defender_keys = [pygame.K_LEFT, pygame.K_RIGHT, pygame.K_UP, pygame.K_DOWN, pygame.K_KP4]
-    planter_spawn = (40, 40)
-    defender_spawn = (948, 690)
-
-    wall_attributes = [
-        [40, 354, (0, 0)],
-        [40, 354, (0, 414)],
-        [40, 354, (984, 0)],
-        [40, 354, (984, 414)],
-        [1024, 40, (0, 0)],
-        [1024, 40, (0, 728)],
-        [40, 350, (90, 90)],
-        [200, 40, (90, 90)],
-        [40, 350, (180, 180)],
-        [400, 40, (100, 580)],
-        [500, 40, (400, 110)],
-        [40, 300, (650, 200)],
-        [250, 40, (650, 500)],
-        [40, 160, (860, 380)]
-    ]
+    planter_spawn = (SCREEN_WIDTH / 25.6, SCREEN_HEIGHT / 19.2)
+    defender_spawn = (SCREEN_WIDTH / 1.08, SCREEN_HEIGHT / 1.11)
 
     # Create a group of sprites to hold Sprites
     all_sprites = pygame.sprite.Group()
@@ -247,25 +258,22 @@ def main() -> None:
     wall_sprites = pygame.sprite.Group()
 
     # Initialize sprites
-    planter = Player(planter_spawn, RED)
+    planter = Player(planter_spawn, CANDY_RED)
     planter.is_planter = True
-    defender = Player(defender_spawn, BLUE)
+    defender = Player(defender_spawn, CERULEAN)
     all_sprites.add(planter)
     all_sprites.add(defender)
     player_sprites.add(planter)
     player_sprites.add(defender)
-    time_hit = 0.0
-    time_until_explosion = 60
-    time_round_end = 0.0
-    time_start = 0
-    time_between_rounds = 5
-    round = 1
+
 
     bomb = Bomb(planter.rect.center)
     all_sprites.add(bomb)
 
-    for attribute in wall_attributes:
-        wall = Wall(*attribute)
+    # for each set of attributes in the wall attributes list
+    for attribute_set in wall_attributes:
+        # make a wall with those attributes
+        wall = Wall(*attribute_set)
 
         wall_sprites.add(wall)
         all_sprites.add(wall)
@@ -519,15 +527,15 @@ def main() -> None:
         if game_state == "introduction":
             # Show introductory messages
             screen.blit(
-                big_font.render(f"Welcome to {WINDOW_TITLE}!", True, BLACK),
+                big_font.render(f"Welcome to {WINDOW_TITLE}!", True, WHITE),
                 (SCREEN_WIDTH / 3.5, SCREEN_HEIGHT / 4)
             )
             screen.blit(
-                big_font.render("Use WASD/Arrow keys to move.", True, BLACK),
+                big_font.render("Use WASD/Arrow keys to move.", True, WHITE),
                 (SCREEN_WIDTH / 4, SCREEN_HEIGHT / 3)
             )
             screen.blit(
-                big_font.render("PLANTER", True, RED),
+                big_font.render("PLANTER", True, CANDY_RED),
                 (SCREEN_WIDTH / 6.5, SCREEN_HEIGHT / 2.10)
             )
 
@@ -552,7 +560,7 @@ def main() -> None:
             )
 
             screen.blit(
-                big_font.render("DEFENDER", True, BLUE),
+                big_font.render("DEFENDER", True, CERULEAN),
                 (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 2.10)
             )
 
@@ -584,19 +592,19 @@ def main() -> None:
         else:
             # Else, show player lives and wins
             screen.blit(
-                font.render(f"LIVES: {planter.lives}", True, RED),
+                font.render(f"LIVES: {planter.lives}", True, CANDY_RED),
                 (SCREEN_WIDTH / 24, SCREEN_HEIGHT / 90)
             )
 
-            screen.blit(font.render(f"LIVES: {defender.lives}", True, BLUE),
+            screen.blit(font.render(f"LIVES: {defender.lives}", True, CERULEAN),
                         (SCREEN_WIDTH / 1.175, SCREEN_HEIGHT / 90)
                         )
 
-            screen.blit(font.render(f"{planter.wins} WINS", True, RED),
+            screen.blit(font.render(f"{planter.wins} WINS", True, CANDY_RED),
                         (SCREEN_WIDTH / 3.25, SCREEN_HEIGHT / 90)
                         )
 
-            screen.blit(font.render(f"{defender.wins} WINS", True, BLUE),
+            screen.blit(font.render(f"{defender.wins} WINS", True, CERULEAN),
                         (SCREEN_WIDTH / 1.65, SCREEN_HEIGHT / 90)
                         )
 
@@ -611,7 +619,7 @@ def main() -> None:
 
                 # show the time left until the next round
                 screen.blit(
-                    big_font.render(f"{int(time_between_rounds - (time.time() - time_round_end))}", True, BLACK),
+                    big_font.render(f"{int(time_between_rounds - (time.time() - time_round_end))}", True, WHITE),
                     (SCREEN_WIDTH / 2, SCREEN_HEIGHT / 1.75)
                     )
 
