@@ -5,12 +5,14 @@
 # This game is inspired by VALORANT by Riot Games
 
 # Credit to Epidemic Sound for the sound effects
-# https://www.epidemicsound.com/
+    # https://www.epidemicsound.com/
 # Background and bomb graphics taken from Freepik
 # Credit to Simpson College for the base player movement and collision code
-#
-# TODO: Credit code I took inspiration from/used as a base
-# TODO: Change project name to Bomblorant
+    # Sample Python/Pygame Programs
+    # Simpson College Computer Science
+    # http://programarcadegames.com/
+    # http://simpson.edu/computer-science/
+    # From: http://programarcadegames.com/python_examples/f.php?file=platform_scroller.py
 
 import time
 import pygame
@@ -21,9 +23,9 @@ pygame.init()
 pygame.mixer.init()
 
 # Constants
-BOMB_TICKING_SOUND = pygame.mixer.Sound("./Music/ES_Bomb Timer 4 - SFX Producer.mp3")
-ROUND_END_SOUND = pygame.mixer.Sound("./Music/ES_Game Chime Winner - SFX Producer.mp3")
-HIT_SOUND = pygame.mixer.Sound("./Music/ES_Impact Brick Hit 2 - SFX Producer.mp3")
+BOMB_TICKING_SOUND = pygame.mixer.Sound('./Music/ES_Bomb Timer 4 - SFX Producer.mp3')
+ROUND_END_SOUND = pygame.mixer.Sound('./Music/ES_Game Chime Winner - SFX Producer.mp3')
+HIT_SOUND = pygame.mixer.Sound('./Music/ES_Impact Brick Hit 2 - SFX Producer.mp3')
 
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
@@ -196,6 +198,10 @@ def main() -> None:
     # Create some local variables that describe the environment
     done = False
     clock = pygame.time.Clock()
+
+    bg_image = pygame.image.load('./images/Vaporwave_background.jpg')
+
+    bg_image = pygame.transform.scale(bg_image, (SCREEN_WIDTH, SCREEN_HEIGHT))
 
     planter_wins = 0
     defender_wins = 0
@@ -502,11 +508,14 @@ def main() -> None:
                 game_state = "running"
 
         # ----------- DRAW THE ENVIRONMENT
-        screen.fill(BGCOLOUR)  # fill with bgcolor
+
+        # Draw the background image
+        screen.blit(bg_image, (0, 0))
 
         # Draw all sprites
         all_sprites.draw(screen)
 
+        # .blit(<surface/image>, coords)
         if game_state == "introduction":
             # Show introductory messages
             screen.blit(
